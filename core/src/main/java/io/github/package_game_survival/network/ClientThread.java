@@ -1,34 +1,44 @@
 package io.github.package_game_survival.network;
 
-import io.github.package_game_survival.pantallas.GameScreen;
+import java.io.*;
+import java.net.Socket;
+
+import io.github.package_game_survival.entidades.mapas.MundoCliente;
 
 public class ClientThread extends Thread {
 
-    private GameController gameController;
-    private GameScreen gameScreen;
+    private MundoCliente mundo;
+    private PrintWriter out;
 
-    // --- Métodos para callbacks ---
-    public void setGameController(GameController controller) {
-        this.gameController = controller;
+    public void setMundo(MundoCliente mundo) {
+        this.mundo = mundo;
     }
 
-    public void setGameScreen(GameScreen screen) {
-        this.gameScreen = screen;
-    }
-
-    // --- Métodos de comunicación ---
     public void sendMessage(String msg) {
-        // Aquí enviarías tu mensaje al servidor por UDP/TCP
-        System.out.println("Enviando mensaje: " + msg);
-    }
-
-    public void sendInput(int dx, int dy) {
-        // Aquí enviarías input al servidor
-        System.out.println("Enviando input: dx=" + dx + ", dy=" + dy);
+        if (out != null) out.println(msg);
     }
 
     @Override
     public void run() {
-        // Loop de escucha al servidor
+        try {
+            Socket socket = new Socket("localhost", 5555);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(
+                new InputStreamReader(socket.getInputStream())
+            );
+
+            String line;
+            while ((line = in.readLine()) != null) {
+                String[] p = line.split(":");
+                if (p[0].equals("POS")) {
+                    int id = Integer.parseInt(p[1]);
+                    float x = Float.parseFloat(p[2]);
+                    float y = Float.parseFloat(p[3]);
+                    mundo.actualizarJugador(id, x, y);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

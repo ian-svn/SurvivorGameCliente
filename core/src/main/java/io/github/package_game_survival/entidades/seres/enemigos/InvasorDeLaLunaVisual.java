@@ -1,22 +1,23 @@
 package io.github.package_game_survival.entidades.seres.enemigos;
 
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import io.github.package_game_survival.entidades.seres.SerVivoVisual;
 
 public class InvasorDeLaLunaVisual extends SerVivoVisual {
 
-    public InvasorDeLaLunaVisual(
-        int id,
-        TextureAtlas atlas,
-        float x,
-        float y
-    ) {
-        super(
-            id,
-            "Invasor De La Luna",
-            atlas.findRegion("idle"),
-            x, y,
-            30, 40
-        );
+    private final TextureRegion region;
+    private final float width = 32;
+    private final float height = 48;
+
+    public InvasorDeLaLunaVisual(TextureAtlas atlas, float x, float y) {
+        super(x, y);
+        this.region = atlas.findRegion("idle");
+    }
+
+    @Override
+    public void render(SpriteBatch batch) {
+        batch.draw(region, x, y, width, height);
     }
 }

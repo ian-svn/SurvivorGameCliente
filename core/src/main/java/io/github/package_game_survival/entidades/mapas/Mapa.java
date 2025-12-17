@@ -7,24 +7,17 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import io.github.package_game_survival.managers.PathManager;
 
 public class Mapa {
-    private TiledMap mapa;
-    private OrthogonalTiledMapRenderer renderer;
+
+    private final TiledMap map;
+    private final OrthogonalTiledMapRenderer renderer;
 
     public Mapa() {
-        mapa = new TmxMapLoader().load(PathManager.MAPA_BOSQUE);
-        renderer = new OrthogonalTiledMapRenderer(mapa, 1f); // escala = 1
+        map = new TmxMapLoader().load(PathManager.MAPA_BOSQUE);
+        renderer = new OrthogonalTiledMapRenderer(map);
     }
 
-    public void render(OrthographicCamera camara) {
-        renderer.setView(camara);
+    public void render(OrthographicCamera camera) {
+        renderer.setView(camera);
         renderer.render();
     }
-
-    public void dispose() {
-        mapa.dispose();
-        renderer.dispose();
-    }
-
-    public TiledMap getMapa() { return mapa; }
-    public OrthogonalTiledMapRenderer getRenderer() { return renderer; }
 }

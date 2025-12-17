@@ -1,24 +1,32 @@
 package io.github.package_game_survival.entidades.seres;
 
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import io.github.package_game_survival.managers.GestorAnimacion;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-public abstract class SerVivoVisual extends EntidadVisual {
+public abstract class SerVivoVisual {
 
-    protected GestorAnimacion animacion;
+    protected float x;
+    protected float y;
 
-    public SerVivoVisual(
-        int id,
-        String nombre,
-        TextureRegion region,
-        float x, float y,
-        float w, float h
-    ) {
-        super(id, nombre, region, x, y, w, h);
-        this.animacion = new GestorAnimacion();
+    public SerVivoVisual(float x, float y) {
+        this.x = x;
+        this.y = y;
     }
 
-    public void updateFromServer(float x, float y) {
-        setPosition(x, y);
+    public void setX(float x) {
+        this.x = x;
     }
+
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public abstract void render(SpriteBatch batch);
 }

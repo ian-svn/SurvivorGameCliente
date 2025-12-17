@@ -1,19 +1,24 @@
 package io.github.package_game_survival.entidades.seres.jugadores;
 
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import io.github.package_game_survival.entidades.seres.SerVivoVisual;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-public abstract class JugadorVisual extends SerVivoVisual {
+public abstract class JugadorVisual {
 
-    public JugadorVisual(
-        int id,
-        String nombre,
-        TextureRegion region,
-        float x,
-        float y,
-        float w,
-        float h
-    ) {
-        super(id, nombre, region, x, y, w, h);
+    protected float x;
+    protected float y;
+
+    public JugadorVisual(float x, float y) {
+        this.x = x;
+        this.y = y;
     }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    public abstract void render(SpriteBatch batch);
 }
