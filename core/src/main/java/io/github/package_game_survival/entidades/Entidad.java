@@ -1,64 +1,38 @@
 package io.github.package_game_survival.entidades;
 
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.utils.Disposable;
-import io.github.package_game_survival.entidades.mapas.Escenario;
-import io.github.package_game_survival.interfaces.Colisionable;
-import io.github.package_game_survival.interfaces.IMundoJuego;
-import io.github.package_game_survival.standards.TooltipStandard;
 
-public abstract class Entidad extends Actor implements Colisionable, Disposable {
+public abstract class Entidad extends Actor {
 
-    private Rectangle hitbox;
-    private TooltipStandard tooltip;
+    protected String nombre;
+    protected Rectangle hitbox = new Rectangle();
 
     public Entidad(String nombre, float x, float y, float ancho, float alto) {
-        setName(nombre);
+        this.nombre = nombre;
         setBounds(x, y, ancho, alto);
+        setColor(Color.WHITE);
+    }
+
+    public void setPos(float x, float y) {
+        setPosition(x, y);
+    }
+
+    public void setTam(float ancho, float alto) {
+        setSize(ancho, alto);
     }
 
     @Override
-    public void act(float delta) {
-        super.act(delta);
-        if (tooltip != null) {
-            tooltip.actualizarPosicion();
-        }
-    }
+    public abstract void draw(Batch batch, float parentAlpha);
 
-    public void delete() {
-        this.remove();
-    }
-
-    public void agregarAlMundo(IMundoJuego mundo) {
-        mundo.agregarActor(this);
-        if (mundo instanceof Escenario) {
-            if (this.tooltip == null) {
-                this.tooltip = new TooltipStandard(getName(), this, (Escenario) mundo);
-            }
-        }
-    }
-
-    @Override
     public Rectangle getRectColision() {
-        if (hitbox == null) {
-            hitbox = new Rectangle(getX(), getY(), getWidth(), getHeight());
-        }
-        hitbox.setPosition(getX(), getY());
+        hitbox.set(getX(), getY(), getWidth(), getHeight());
         return hitbox;
     }
 
-    public String getNombre() { return getName(); }
-    public float getAncho() { return getWidth(); }
-    public float getAlto() { return getHeight(); }
-
-    // --- MÉTODOS QUE FALTABAN ---
-    public float getCentroX() { return getX() + getWidth() / 2; }
-    public float getCentroY() { return getY() + getHeight() / 2; }
-
-    public TooltipStandard getTooltip() { return tooltip; }
-    public void instanciarTooltip(TooltipStandard tooltip) { this.tooltip = tooltip; }
-
-    @Override
-    public void dispose() { }
+    public String getNombre() {
+        return nombre;
+    }
 }

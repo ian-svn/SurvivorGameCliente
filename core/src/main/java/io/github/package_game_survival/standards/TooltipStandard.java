@@ -6,7 +6,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextTooltip;
 import com.badlogic.gdx.scenes.scene2d.ui.TooltipManager;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
-import io.github.package_game_survival.entidades.mapas.Escenario;
 import io.github.package_game_survival.managers.Assets;
 import io.github.package_game_survival.managers.PathManager;
 
@@ -17,36 +16,47 @@ public class TooltipStandard {
 
     static {
         tm.animations = false;
-        tm.initialTime = 0.1f;
-        tm.subsequentTime = 0f;
-        tm.resetTime = 0f;
-        tm.offsetX = 10f;
-        tm.offsetY = 10f;
+        tm.initialTime = 0.1f;       // Tiempo antes de que aparezca el tooltip
+        tm.subsequentTime = 0f;      // Tiempo entre tooltips consecutivos
+        tm.resetTime = 0f;            // Tiempo de reset
+        tm.offsetX = 10f;             // Offset horizontal
+        tm.offsetY = 10f;             // Offset vertical
     }
 
     private final TextTooltip tooltip;
 
-    // Constructor para actores generales (Jugador, Items)
+    /**
+     * Constructor para actores generales (jugadores, items, enemigos, etc.)
+     */
     public TooltipStandard(String text, Actor actor) {
         tooltip = new TextTooltip(text, tm, skinTooltip);
-        tooltip.getContainer().setBackground((Drawable) null);
+        tooltip.getContainer().setBackground((Drawable) null); // Sin fondo por defecto
         actor.addListener(tooltip);
     }
 
-    // Constructor de compatibilidad (por si lo usas en Escenario)
-    public TooltipStandard(String text, Actor actor, Escenario escenario) {
+    /**
+     * Constructor de compatibilidad por si lo usas en un escenario
+     */
+    public TooltipStandard(String text, Actor actor, Object escenario) {
         this(text, actor);
     }
 
-    // --- NUEVO: PERMITE CAMBIAR EL TEXTO EN VIVO ---
+    /**
+     * Permite actualizar el texto del tooltip en vivo
+     */
     public void setText(String newText) {
-        // Accedemos al Label interno del TextTooltip y le cambiamos el texto
         Label label = tooltip.getActor();
         if (label != null) {
             label.setText(newText);
-            tooltip.getContainer().pack(); // Reajustar tamaño del fondo
+            tooltip.getContainer().pack(); // Ajusta tamaño automáticamente
         }
     }
 
-    public void actualizarPosicion() { }
+    /**
+     * Método opcional para actualizar la posición del tooltip si lo necesitas
+     */
+    public void actualizarPosicion() {
+        // Por defecto TooltipManager ya maneja la posición según el mouse
+        // Si quieres moverlo manualmente, puedes agregar lógica aquí
+    }
 }
