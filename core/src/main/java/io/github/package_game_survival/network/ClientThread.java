@@ -2,56 +2,58 @@ package io.github.package_game_survival.network;
 
 import com.badlogic.gdx.Gdx;
 import io.github.package_game_survival.pantallas.GameScreen;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
 public class ClientThread extends Thread {
 
-    private Socket socket;
-    private DataInputStream in;
-    private DataOutputStream out;
+    private DatagramSocket socket;
+    private InetAddress serverIp;
+    private int serverPort = 5555; // Debe coincidir con el Server
     private GameScreen gameScreen;
+    private GameController gameController;
     private boolean running = true;
 
-    // ID único asignado por el servidor
-    private int clienteID = -1;
+    // Tu ID asignado (se definirá por lógica de llegada, 1 o 2)
+    // UDP no tiene conexión persistente, así que usaremos el puerto local como ID temporal
+    private int miIDLocal;
 
     public ClientThread() {
-        // Constructor vacío
+        try {
+            // Cliente NO especifica puerto en el constructor (usa uno libre aleatorio)
+            socket = new DatagramSocket();
+            serverIp = InetAddress.getByName("127.0.0.1"); // CAMBIAR SI ES OTRA PC
+            miIDLocal = socket.getLocalPort();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public void setGameScreen(GameScreen screen) {
-        this.gameScreen = screen;
-    }
+    public void setGameScreen(GameScreen screen) { this.gameScreen = screen; }
+    public void setGameController(GameController gc) { this.gameController = gc; }
 
-    public int getClienteID() {
-        return clienteID;
-    }
+    // ID temporal para saber "quien soy"
+    public int getClienteID() { return miIDLocal; }
 
     @Override
     public void run() {
-        try {
-            // Intentamos conectar
-            socket = new Socket("localhost", 9999);
-            in = new DataInputStream(socket.getInputStream());
-            out = new DataOutputStream(socket.getOutputStream());
+        System.out.println("CLIENTE UDP: Iniciado. Escuchando respuestas...");
+        while (running) {
+            try {
+                byte[] buffer = new byte[1024];
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
-            System.out.println("✅ Conectado al servidor con éxito.");
+                // Bloqueante: Espera recibir datos del servidor
+                socket.receive(packet);
+                String msg = new String(packet.getData(), 0, packet.getLength()).trim();
 
-            // Bucle principal de escucha
-            while (running) {
-                String msg = in.readUTF();
                 procesarMensaje(msg);
-            }
 
-        } catch (java.net.ConnectException e) {
-            // ESTO CAPTURA EL ERROR SI EL SERVER ESTÁ APAGADO
-            System.err.println("⚠️ No se encontró el servidor. Jugando en modo OFFLINE.");
-            // Aquí podrías poner una variable boolean offline = true;
-        } catch (IOException e) {
-            e.printStackTrace();
+            } catch (IOException e) {
+                if (running) e.printStackTrace();
+            }
         }
     }
 
@@ -59,37 +61,37 @@ public class ClientThread extends Thread {
         String[] partes = msg.split(":");
         String comando = partes[0];
 
-        // 1. Recibir mi ID al conectarme
-        if (comando.equals("ID")) {
-            this.clienteID = Integer.parseInt(partes[1]);
-            System.out.println("Servidor me asignó ID: " + clienteID);
+        if (comando.equals("CONNECTED")) {
+            System.out.println("¡Conexión confirmada por el servidor!");
+            if (gameController != null) gameController.onConnected();
         }
-
-        // 2. Recibir movimiento de otro jugador
+        else if (comando.equals("START")) {
+            // START:CLASE_J1:CLASE_J2
+            System.out.println("¡JUEGO INICIADO!");
+            if (gameController != null) gameController.startGame(msg);
+        }
         else if (comando.equals("MOVE")) {
+            // MOVE : ID_ORIGEN : X : Y
             if (gameScreen != null) {
                 try {
-                    int idEmisor = Integer.parseInt(partes[1]);
+                    int idRemoto = Integer.parseInt(partes[1]);
                     float x = Float.parseFloat(partes[2]);
                     float y = Float.parseFloat(partes[3]);
 
-                    // Solo movemos si el ID NO es el nuestro
-                    if (idEmisor != this.clienteID) {
-                        Gdx.app.postRunnable(() -> {
-                            gameScreen.actualizarRemoto(x, y);
-                        });
-                    }
-                } catch (Exception e) {
-                    System.err.println("Error procesando MOVE: " + msg);
-                }
+                    // Actualizar en el hilo principal de LibGDX
+                    Gdx.app.postRunnable(() -> gameScreen.actualizarRemoto(x, y));
+                } catch (Exception e) { }
             }
         }
     }
 
     public void sendMessage(String msg) {
-        if (out != null) {
+        if (socket != null && !socket.isClosed()) {
             try {
-                out.writeUTF(msg);
+                byte[] data = msg.getBytes();
+                // Enviar siempre al IP y Puerto del Servidor
+                DatagramPacket p = new DatagramPacket(data, data.length, serverIp, serverPort);
+                socket.send(p);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -98,10 +100,6 @@ public class ClientThread extends Thread {
 
     public void terminate() {
         running = false;
-        try {
-            if (socket != null) socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        if (socket != null) socket.close();
     }
 }

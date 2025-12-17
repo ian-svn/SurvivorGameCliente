@@ -21,78 +21,107 @@ public class CharacterSelectionScreen implements Screen, GameController {
     private final Stage stage;
     private ClientThread clientThread;
 
+    // UI
     private LabelStandard estadoLabel;
     private TextButtonStandard btnGuerrero, btnCazador;
+    private Skin skin;
 
+    // Lógica
     private boolean seleccionRealizada = false;
-    private boolean juegoIniciado = false;
     private TipoClase miClaseElegida = TipoClase.GUERRERO; // Por defecto
 
     public CharacterSelectionScreen(MyGame game) {
         this.game = game;
         this.stage = new Stage(new FitViewport(MyGame.ANCHO_PANTALLA, MyGame.ALTO_PANTALLA));
+
+        // 1. INICIALIZAMOS EL HILO DEL CLIENTE (UDP)
+        // Se quedará escuchando respuestas del servidor en segundo plano
+        this.clientThread = new ClientThread();
+        this.clientThread.setGameController(this); // Para que nos avise (callbacks)
+        this.clientThread.start();
+    }
+
+    @Override
+    public void show() {
         Gdx.input.setInputProcessor(stage);
 
-        clientThread = new ClientThread();
-        clientThread.start();
+        // Cargar recursos
+        this.skin = Assets.get(PathManager.BACKGROUND, Skin.class);
 
-        crearUI();
+        // Crear Tabla para organizar la UI
+        Table table = new Table();
+        table.setFillParent(true);
+        if (skin != null) {
+            table.setBackground(skin.getDrawable("fondoMenu"));
+        }
+
+        // Crear Componentes
+        estadoLabel = new LabelStandard("ELIGE TU CLASE PARA UNIRTE");
+
+        btnGuerrero = new TextButtonStandard("Guerrero");
+        btnGuerrero.setClickListener(() -> seleccionarClase(TipoClase.GUERRERO));
+
+        btnCazador = new TextButtonStandard("Cazador");
+        btnCazador.setClickListener(() -> seleccionarClase(TipoClase.CAZADOR));
+
+        // Añadir a la tabla
+        table.add(estadoLabel).pad(20).colspan(2).row();
+        table.add(btnGuerrero).pad(10).width(200).height(60);
+        table.add(btnCazador).pad(10).width(200).height(60);
+
+        stage.addActor(table);
     }
 
-    private void crearUI() {
-        Table tabla = new Table();
-        tabla.setFillParent(true);
-        Skin skin = Assets.get(PathManager.BACKGROUND, Skin.class);
-        if(skin != null) tabla.setBackground(skin.getDrawable("fondoMenu"));
+    private void seleccionarClase(TipoClase clase) {
+        if (seleccionRealizada) return; // Evitar doble click
 
-        LabelStandard titulo = new LabelStandard("ELIGE TU CLASE");
-        estadoLabel = new LabelStandard("Estado: Elige personaje para conectar...");
-
-        btnGuerrero = new TextButtonStandard("GUERRERO");
-        btnGuerrero.setClickListener(() -> enviarSeleccion(TipoClase.GUERRERO));
-
-        btnCazador = new TextButtonStandard("CAZADOR");
-        btnCazador.setClickListener(() -> enviarSeleccion(TipoClase.CAZADOR));
-
-        tabla.add(titulo).padBottom(30).colspan(2).row();
-        tabla.add(btnGuerrero).size(200, 60).pad(10);
-        tabla.add(btnCazador).size(200, 60).pad(10).row();
-        tabla.add(estadoLabel).padTop(30).colspan(2);
-
-        stage.addActor(tabla);
-    }
-
-    private void enviarSeleccion(TipoClase clase) {
-        if (seleccionRealizada) return;
         seleccionRealizada = true;
-        this.miClaseElegida = clase; // Guardamos la selección
+        this.miClaseElegida = clase;
 
+        // Deshabilitar botones para que no spamee
         btnGuerrero.setDisabled(true);
         btnCazador.setDisabled(true);
+
         estadoLabel.setText("Conectando como " + clase.toString() + "...");
 
+        // --- ENVIAR PAQUETE UDP AL SERVIDOR ---
+        // Formato: CONNECT:CLASE
         clientThread.sendMessage("CONNECT:" + clase.toString());
     }
 
+    // --- MÉTODOS DE GAMECONTROLLER (Vienen del ClientThread) ---
+
     @Override
     public void onConnected() {
+        // El servidor respondió "CONNECTED"
+        // Usamos postRunnable porque esto viene de otro hilo
         Gdx.app.postRunnable(() -> {
-            estadoLabel.setText("¡Conectado! Esperando al otro jugador (1/2)...");
-            estadoLabel.setColor(0, 1, 0, 1);
+            estadoLabel.setText("¡Conectado! Esperando al jugador 2...");
         });
     }
 
     @Override
-    public void startGame() {
-        if (juegoIniciado) return;
-        juegoIniciado = true;
-
+    public void startGame(String mensajeStart) {
+        // El servidor envió "START:..."
         Gdx.app.postRunnable(() -> {
-            // --- AQUÍ ESTABA EL ERROR: AHORA PASAMOS LOS 3 PARÁMETROS ---
+            // Aquí podrías parsear el mensaje si necesitas saber la clase del enemigo
+            // Ejemplo msg: "START:GUERRERO:CAZADOR"
+
+            // Pasamos el clientThread (que ya tiene el socket abierto) a la pantalla de juego
             game.setScreen(new GameScreen(game, clientThread, miClaseElegida));
+
+            // Liberamos la UI de selección, pero NO el hilo del cliente
             dispose();
         });
     }
+
+    // Método por defecto de la interfaz (si lo tienes definido sin argumentos)
+    @Override
+    public void startGame() {
+        startGame("");
+    }
+
+    // --- MÉTODOS ESTÁNDAR DE SCREEN ---
 
     @Override
     public void render(float delta) {
@@ -102,15 +131,14 @@ public class CharacterSelectionScreen implements Screen, GameController {
     }
 
     @Override public void resize(int w, int h) { stage.getViewport().update(w, h, true); }
-
-    @Override
-    public void dispose() {
-        if(stage != null) stage.dispose();
-        // No cerramos el clientThread porque se lo pasamos al juego
-    }
-
-    @Override public void show() {}
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
+
+    @Override
+    public void dispose() {
+        if (stage != null) stage.dispose();
+        // NOTA: No hacemos clientThread.terminate() aquí porque lo pasamos a GameScreen.
+        // Solo si cerramos la app sin jugar deberíamos cerrarlo.
+    }
 }
